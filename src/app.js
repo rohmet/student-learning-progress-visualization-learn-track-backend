@@ -4,6 +4,7 @@ import cors from "cors";
 import "dotenv/config";
 
 import authRoutes from "./api/auth/auth.routes.js";
+import { requireAuth } from "../middleware/auth.middleware.js";
 
 // Impor klien Supabase yang sudah kita buat
 import { supabase } from "./config/supabase.js";
@@ -38,6 +39,13 @@ app.get("/api/test", async (req, res) => {
   }
 });
 
+// Auth routes
 app.use("/api/auth", authRoutes);
+
+// Endpoint publik
+router.get("/learning-paths", getAllLearningPaths);
+
+// Endpoint privat.
+router.get("/dashboard", requireAuth, getMyDashboard);
 
 export default app;
