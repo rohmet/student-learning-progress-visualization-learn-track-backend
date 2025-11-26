@@ -2,7 +2,7 @@
 
 Dokumentasi ini merinci _endpoint_ API untuk layanan _backend_ Learn Track.
 
-**Base URL:** `http://localhost:8080`
+**Base URL:** `https://learn-track-backend-production.up.railway.app/`
 
 **Autentikasi:**
 _Endpoint_ yang dilindungi (`Protected`) memerlukan _header_ `Authorization` dengan _Bearer Token_ yang valid.
