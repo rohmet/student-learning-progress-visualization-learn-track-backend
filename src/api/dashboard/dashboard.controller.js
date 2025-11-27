@@ -30,8 +30,7 @@ export const getMyDashboard = async (req, res) => {
 
     if (enrollError) throw enrollError;
 
-    // Buat "Peta" (Map) agar pencarian cepat: course_id -> enrollment_id
-    // Contoh: { "uuid-course-A": "uuid-enrollment-1", ... }
+    // Buat Map: course_id -> enrollment_id
     const enrollmentMap = {};
     userEnrollments.forEach((e) => {
       enrollmentMap[e.course_id] = e.id;
@@ -63,6 +62,16 @@ export const getMyDashboard = async (req, res) => {
           })
         );
 
+        // Cek apakah user punya setidaknya 1 enrollment di path ini
+        const isEnrolledInPath = coursesWithProgress.some(
+          (c) => c.enrollment_id !== null
+        );
+
+        // Jika TIDAK ADA enrollment sama sekali di path ini, kembalikan null
+        if (!isEnrolledInPath) {
+          return null;
+        }
+
         // Urutkan course berdasarkan kolom 'order' (untuk tampilan urut)
         coursesWithProgress.sort((a, b) => a.order - b.order);
 
@@ -86,7 +95,10 @@ export const getMyDashboard = async (req, res) => {
       })
     );
 
-    res.status(200).json(dashboardData);
+    // Buang nilai 'null' (Learning Path yang tidak diambil)
+    const filteredDashboard = dashboardData.filter((item) => item !== null);
+
+    res.status(200).json(filteredDashboard);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
