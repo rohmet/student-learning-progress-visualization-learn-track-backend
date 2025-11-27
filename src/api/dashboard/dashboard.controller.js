@@ -4,50 +4,89 @@ export const getMyDashboard = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const { data: enrollments, error: enrollError } = await supabase
-      .from("enrollments")
+    // Mengambil SEMUA Learning Path beserta Course-nya
+    const { data: paths, error: pathError } = await supabase
+      .from("learning_paths")
       .select(
         `
-        id, 
-        course_id,
+        id,
+        name,
         courses (
+          id,
           name,
-          learning_paths ( name )
+          "order"
         )
       `
       )
+      .order("name");
+
+    if (pathError) throw pathError;
+
+    // Mengambil semua enrollment user
+    const { data: userEnrollments, error: enrollError } = await supabase
+      .from("enrollments")
+      .select("id, course_id")
       .eq("user_id", userId);
 
     if (enrollError) throw enrollError;
 
+    // Buat "Peta" (Map) agar pencarian cepat: course_id -> enrollment_id
+    // Contoh: { "uuid-course-A": "uuid-enrollment-1", ... }
+    const enrollmentMap = {};
+    userEnrollments.forEach((e) => {
+      enrollmentMap[e.course_id] = e.id;
+    });
+
+    // Menyusun Data Dashboard: Iterasi Path -> Course
     const dashboardData = await Promise.all(
-      enrollments.map(async (enroll) => {
-        const { data: progressData, error: rpcError } = await supabase.rpc(
-          "get_course_progress",
-          { p_enrollment_id: enroll.id }
+      paths.map(async (path) => {
+        const coursesWithProgress = await Promise.all(
+          path.courses.map(async (course) => {
+            const enrollmentId = enrollmentMap[course.id];
+            let progress = 0;
+
+            if (enrollmentId) {
+              const { data: progressData, error: rpcError } =
+                await supabase.rpc("get_course_progress", {
+                  p_enrollment_id: enrollmentId,
+                });
+              if (!rpcError) progress = progressData;
+            }
+
+            return {
+              course_id: course.id,
+              course_name: course.name,
+              enrollment_id: enrollmentId || null,
+              progress_percent: progress,
+              order: course.order,
+            };
+          })
         );
 
-        if (rpcError) throw rpcError;
+        // Urutkan course berdasarkan kolom 'order' (untuk tampilan urut)
+        coursesWithProgress.sort((a, b) => a.order - b.order);
+
+        // Hitung Rata-rata Progres Path
+        // (Jumlah Progres Semua Course / Jumlah Course)
+        const totalProgress = coursesWithProgress.reduce(
+          (sum, c) => sum + c.progress_percent,
+          0
+        );
+        const avgPathProgress =
+          coursesWithProgress.length > 0
+            ? totalProgress / coursesWithProgress.length
+            : 0;
 
         return {
-          enrollment_id: enroll.id,
-          course: {
-            course_id: enroll.course_id,
-            name: enroll.courses.name,
-            learning_path: enroll.courses.learning_paths.name,
-          },
-          progress_percent: progressData,
+          path_id: path.id,
+          path_name: path.name,
+          path_progress_percent: Math.round(avgPathProgress), // Dibulatkan (misal: 55.67 -> 56)
+          courses: coursesWithProgress,
         };
       })
     );
 
-    res.status(200).json({
-      user: {
-        name: req.user.user_metadata?.full_name || req.user.email,
-        email: req.user.email,
-      },
-      enrollments: dashboardData,
-    });
+    res.status(200).json(dashboardData);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
