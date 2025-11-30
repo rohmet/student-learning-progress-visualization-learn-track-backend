@@ -177,3 +177,80 @@ export const getEnrollmentDetails = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// --- FUNGSI REKOMENDASI---
+export const getRecommendations = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { data: enrollments, error: enrollError } = await supabase.from(
+      "enrollments"
+    ).select(`
+        id,
+        course_id,
+        courses (
+          id,
+          name,
+          learning_paths ( name )
+        )
+      `);
+
+    if (enrollError) throw enrollError;
+
+    // Mencari "Langkah Selanjutnya" untuk setiap enrollment
+    const recommendations = await Promise.all(
+      enrollments.map(async (enroll) => {
+        // Ambil 1 tutorial dari course ini...
+        // ...yang ID-nya TIDAK ADA di tabel tutorial_progress dengan status 'completed'
+
+        // A. Ambil ID tutorial yang sudah selesai
+        const { data: completedTuts } = await supabase
+          .from("tutorial_progress")
+          .select("tutorial_id")
+          .eq("enrollment_id", enroll.id)
+          .eq("status", "completed");
+
+        const completedIds = completedTuts.map((t) => t.tutorial_id);
+
+        // B. Ambil tutorial PERTAMA yang ID-nya BUKAN salah satu dari completedIds
+        let query = supabase
+          .from("tutorials")
+          .select('id, title, "order"')
+          .eq("course_id", enroll.course_id)
+          .order("order", { ascending: true })
+          .limit(1);
+
+        if (completedIds.length > 0) {
+          // Filter: Jangan ambil yang sudah selesai
+          query = query.not("id", "in", `(${completedIds.join(",")})`);
+        }
+
+        const { data: nextTutorial, error: tutError } = await query.single();
+
+        // Jika error (misal course kosong) atau tidak ada nextTutorial (berarti sudah lulus 100%)
+        // Maka kembalikan null
+        if (tutError || !nextTutorial) {
+          return null;
+        }
+
+        // C. Susun Objek Rekomendasi
+        return {
+          learning_path: enroll.courses.learning_paths.name,
+          course_name: enroll.courses.name,
+          enrollment_id: enroll.id,
+          next_step: {
+            tutorial_id: nextTutorial.id,
+            title: nextTutorial.title,
+            order: nextTutorial.order,
+          },
+        };
+      })
+    );
+
+    const validRecommendations = recommendations.filter((r) => r !== null);
+
+    res.status(200).json(validRecommendations);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
