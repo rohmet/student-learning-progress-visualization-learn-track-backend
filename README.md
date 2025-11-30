@@ -1,4 +1,4 @@
-# Learn Track API Documentation (v1.2)
+# Learn Track API Documentation (v1.3)
 
 Dokumentasi ini merinci _endpoint_ API untuk layanan _backend_ Learn Track.
 
