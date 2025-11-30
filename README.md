@@ -265,3 +265,38 @@ memperbarui status modul (misalnya, dari not_started menjadi completed) dan meng
     "error": "Tutorial not found"
   }
   ```
+
+### `GET /api/dashboard/recommendations`
+
+mengambil rekomendasi langkah pembelajaran berikutnya berdasarkan progres setiap course yang sedang diambil oleh pengguna. Sistem akan mencari tutorial pertama yang belum selesai dari setiap enrollment.
+
+- **Authentication:** `Protected`
+
+- **URL Parameters:** `Tidak ada`
+
+- **Request Body:** `Tidak ada`
+
+- **Success Response:** `200 OK`
+
+  ```json
+  [
+    {
+      "learning_path": "Android Learning Path",
+      "course_name": "Belajar Dasar Kotlin",
+      "enrollment_id": "uuid-enrollment-1",
+      "next_step": {
+        "tutorial_id": "uuid-modul-2",
+        "title": "Modul 2: Variabel dan Tipe Data",
+        "order": 2
+      }
+    }
+  ]
+  ```
+
+- **Error Response:** `500 Internal Server Error`
+
+  ```json
+  {
+    "error": "Error message from server"
+  }
+  ```
