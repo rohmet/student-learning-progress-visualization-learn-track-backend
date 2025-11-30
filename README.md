@@ -229,7 +229,7 @@ Mengambil data detail untuk satu _enrollment_ (satu _course_ spesifik). Ini meng
   }
   ```
 
-### `GET /api/progress/tutorials/:tutorialId`
+### `POST /api/progress/tutorials/:tutorialId`
 
 memperbarui status modul (misalnya, dari not_started menjadi completed) dan mengembalikan persentase progres course yang baru.
 
@@ -237,7 +237,7 @@ memperbarui status modul (misalnya, dari not_started menjadi completed) dan meng
 
 - **URL Parameters:**
 
-  - `:tutorialId` (string, UUID): ID unik course yang didapatkan dari GET /api/dashboard/:enrollmentId. Dari respons JSON, salin tutorial_id dari salah satu modul yang statusnya 'not_started'.
+  - `:tutorialId` (string, UUID): ID unik course yang didapatkan dari GET /api/dashboard/:enrollmentId.
 
 - **Request Body:**
 
